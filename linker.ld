@@ -1,0 +1,1 @@
+ENTRY(_start) SECTIONS { . = 0xffffffff80000000; .text : { *(.text .text.*) } . = ALIGN(4096); .requests : { KEEP(*(.requests_start)) KEEP(*(.requests)) KEEP(*(.requests_end)) } .rodata : { *(.rodata .rodata.*) } .data : { *(.data .data.*) } .bss : { *(.bss .bss.*) *(COMMON) } }
