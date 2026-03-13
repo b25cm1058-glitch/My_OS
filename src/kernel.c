@@ -1,4 +1,4 @@
-#include <stdint.h>
+    #include <stdint.h>
 #include <stddef.h>
 #include <limine.h>
 #include "font.h"
@@ -687,7 +687,7 @@ void _start(void)
                             cur_y += 12;
                         }
                     }
-                    else if (strcmp(input_buffer, "Chhampa") == 0 || strcmp(input_buffer, "chhampa") == 0)
+                    else if (strcmp(input_buffer, "Chanpa") == 0 || strcmp(input_buffer, "chanpa") == 0)
                     {
                         draw_string("Hello Bhabhi ji ", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
