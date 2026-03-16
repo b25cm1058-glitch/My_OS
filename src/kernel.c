@@ -495,26 +495,6 @@ void _start(void)
                         draw_string("Hoping for your day to be good. Lets work--.", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
                     }
-                    else if (strcmp(input_buffer, "Aaditi") == 0 || strcmp(input_buffer, "aaditi") == 0)
-                    {
-                        draw_string("Hello Aaditi ", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                        draw_string("You are the angel. Thanks for comming to Tushar's life.", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                        draw_string("What are you planning to work on ?", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                    }
-                    else if (strcmp(input_buffer, "1149209") == 0)
-                    {
-                        draw_string("Hmmmm Let me think. Is this Aaditi?", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                        draw_string("Hello Aaditi ", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                        draw_string("You are the angel. Thanks for comming to Tushar's life.", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                        draw_string("What are you planning to work on ?", cur_x, cur_y, current_text_color, fb);
-                        cur_y += 12;
-                    }
                     else if (strcmp(input_buffer, "Lahari") == 0 || strcmp(input_buffer, "lahari") == 0)
                     {
                         draw_string("Hello Bhabhi ji ", cur_x, cur_y, current_text_color, fb);
