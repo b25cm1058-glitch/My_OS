@@ -755,7 +755,7 @@ void _start(void)
                     }
                     else if (strcmp(input_buffer, "Aayushman") == 0 || strcmp(input_buffer, "aayushman") == 0 ||
                              strcmp(input_buffer, "Lakshit") == 0 || strcmp(input_buffer, "lakshit") == 0 ||
-                             strcmp(input_buffer, "Humanshu") == 0 || strcmp(input_buffer, "humanshu") == 0 ||
+                             strcmp(input_buffer, "Himanshu") == 0 || strcmp(input_buffer, "himanshu") == 0 ||
                              strcmp(input_buffer, "Mohit") == 0 || strcmp(input_buffer, "mohit") == 0 ||
                              strcmp(input_buffer, "Vaman") == 0 || strcmp(input_buffer, "vaman") == 0)
                     {
