@@ -346,6 +346,43 @@ void draw_pixel(int x, int y, uint32_t color, struct limine_framebuffer *fb)
     uint32_t *fb_ptr = fb->address;
     fb_ptr[y * (fb->pitch / 4) + x] = color;
 }
+void draw_safe_pixel(int x, int y, uint32_t color, struct limine_framebuffer *fb)
+{
+    if (x >= 0 && x < (int)fb->width && y >= 0 && y < (int)fb->height)
+    {
+        draw_pixel(x, y, color, fb);
+    }
+}
+void draw_hollow_circle(int center_x, int center_y, int radius, uint32_t color, struct limine_framebuffer *fb)
+{
+    int x = 0;
+    int y = radius;
+    int p = 3 - 2 * radius;
+
+    while (y >= x)
+    {
+        // Draw the 8 octants using our clean safe pixel function
+        draw_safe_pixel(center_x + x, center_y + y, color, fb);
+        draw_safe_pixel(center_x - x, center_y + y, color, fb);
+        draw_safe_pixel(center_x + x, center_y - y, color, fb);
+        draw_safe_pixel(center_x - x, center_y - y, color, fb);
+        draw_safe_pixel(center_x + y, center_y + x, color, fb);
+        draw_safe_pixel(center_x - y, center_y + x, color, fb);
+        draw_safe_pixel(center_x + y, center_y - x, color, fb);
+        draw_safe_pixel(center_x - y, center_y - x, color, fb);
+
+        x++;
+        if (p > 0)
+        {
+            y--;
+            p = p + 4 * (x - y) + 10;
+        }
+        else
+        {
+            p = p + 4 * x + 6;
+        }
+    }
+}
 void draw_rect(int start_x, int start_y, int width, int height, uint32_t color, struct limine_framebuffer *fb)
 {
     for (int y = 0; y < height; y++)
@@ -1488,6 +1525,36 @@ void _start(void)
 
                         draw_string("Hexagon drawn!", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12; // Move the cursor down for the next terminal line
+                    }
+                    else if (strncmp(input_buffer, "hcircle ", 8) == 0)
+                    {
+                        int i = 8;
+                        int params[3] = {0, 0, 0};
+
+                        for (int p = 0; p < 3; p++)
+                        {
+                            while (input_buffer[i] == ' ')
+                                i++;
+                            while (input_buffer[i] >= '0' && input_buffer[i] <= '9')
+                            {
+                                params[p] = params[p] * 10 + (input_buffer[i] - '0');
+                                i++;
+                            }
+                        }
+
+                        while (input_buffer[i] == ' ')
+                            i++;
+                        uint32_t color = 0xFFFFFF;
+                        if (input_buffer[i] != '\0')
+                        {
+                            if (input_buffer[i] == '0' && (input_buffer[i + 1] == 'x' || input_buffer[i + 1] == 'X'))
+                                i += 2;
+                            color = hex2int(&input_buffer[i]);
+                        }
+
+                        draw_hollow_circle(params[0], params[1], params[2], color, fb);
+                        draw_string("Hollow circle drawn!", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12;
                     }
                     else if (strncmp(input_buffer, "heart ", 6) == 0)
                     {
