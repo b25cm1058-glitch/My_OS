@@ -61,7 +61,8 @@ static inline uint16_t get_cs(void)
     __asm__ volatile("mov %%cs, %0" : "=r"(cs));
     return cs;
 }
-static inline uint64_t read_cr2(void) {
+static inline uint64_t read_cr2(void)
+{
     uint64_t cr2_val;
     __asm__ volatile("mov %%cr2, %0" : "=r"(cr2_val));
     return cr2_val;
@@ -95,31 +96,34 @@ __attribute__((interrupt)) void exception_div_zero(struct interrupt_frame *frame
     }
 }
 
-__attribute__((interrupt)) void exception_page_fault(struct interrupt_frame *frame, uint64_t error_code) {
+__attribute__((interrupt)) void exception_page_fault(struct interrupt_frame *frame, uint64_t error_code)
+{
     (void)frame;
     (void)error_code; // We won't decode the exact error bits right now, but we must accept the parameter
 
     uint64_t faulting_address = read_cr2();
-    
+
     // If the framebuffer is ready, print the Blue Screen of Death!
-    if (global_fb != NULL) {
+    if (global_fb != NULL)
+    {
         clear_screen(global_fb);
-        
+
         draw_string("KERNEL PANIC: PAGE FAULT!", 10, 10, 0xFF0000, global_fb);
         draw_string("The CPU tried to access unmapped memory.", 10, 30, 0xFFFFFF, global_fb);
-        
+
         draw_string("Faulting Address: ", 10, 50, 0xFFFFFF, global_fb);
-        
+
         // Convert the CR2 address to hex and print it
         char addr_str[20];
         ptr_to_hex(faulting_address, addr_str);
         draw_string(addr_str, 10 + (18 * 8), 50, 0x00FF00, global_fb);
-        
+
         draw_string("System Halted.", 10, 70, 0xFF0000, global_fb);
     }
 
     // Stop the CPU forever
-    for (;;) {
+    for (;;)
+    {
         __asm__ volatile("cli; hlt");
     }
 }
@@ -172,7 +176,6 @@ __attribute__((used, section(".requests"))) static volatile struct limine_kernel
     .id = LIMINE_KERNEL_ADDRESS_REQUEST,
     .revision = 0};
 
-    
 // --- Port I/O Helpers ---
 
 static inline void outw(uint16_t port, uint16_t val)
@@ -362,6 +365,67 @@ void draw_rect(int start_x, int start_y, int width, int height, uint32_t color, 
         }
     }
 }
+void draw_line_fb(int x0, int y0, int x1, int y1, uint32_t color, struct limine_framebuffer *fb)
+{
+    int dx = (x1 > x0) ? (x1 - x0) : (x0 - x1);
+    int dy = (y1 > y0) ? (y1 - y0) : (y0 - y1);
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+    int err = (dx > dy ? dx : -dy) / 2;
+    int e2;
+
+    while (1)
+    {
+        // Safe clipping bounds check!
+        if (x0 >= 0 && x0 < (int)fb->width && y0 >= 0 && y0 < (int)fb->height)
+        {
+            draw_pixel(x0, y0, color, fb);
+        }
+
+        if (x0 == x1 && y0 == y1)
+            break;
+        e2 = err;
+        if (e2 > -dx)
+        {
+            err -= dy;
+            x0 += sx;
+        }
+        if (e2 < dy)
+        {
+            err += dx;
+            y0 += sy;
+        }
+    }
+}
+void draw_hexagon(int center_x, int center_y, int radius, uint32_t color, struct limine_framebuffer *fb)
+{
+    // We use integer math to avoid kernel floating-point exceptions.
+    // sin(60 degrees) is approximately 0.866.
+    int dx = (radius * 866) / 1000;
+    int dy = radius / 2;
+
+    // Calculate the 6 vertices
+    int x0 = center_x;
+    int y0 = center_y - radius; // Top
+    int x1 = center_x + dx;
+    int y1 = center_y - dy; // Top Right
+    int x2 = center_x + dx;
+    int y2 = center_y + dy; // Bottom Right
+    int x3 = center_x;
+    int y3 = center_y + radius; // Bottom
+    int x4 = center_x - dx;
+    int y4 = center_y + dy; // Bottom Left
+    int x5 = center_x - dx;
+    int y5 = center_y - dy; // Top Left
+
+    // Draw the 6 edges connecting the vertices
+    draw_line_fb(x0, y0, x1, y1, color, fb);
+    draw_line_fb(x1, y1, x2, y2, color, fb);
+    draw_line_fb(x2, y2, x3, y3, color, fb);
+    draw_line_fb(x3, y3, x4, y4, color, fb);
+    draw_line_fb(x4, y4, x5, y5, color, fb);
+    draw_line_fb(x5, y5, x0, y0, color, fb);
+}
 void draw_circle(int center_x, int center_y, int radius, uint32_t color, struct limine_framebuffer *fb)
 {
     // We create a square "bounding box" around the center point
@@ -381,6 +445,47 @@ void draw_circle(int center_x, int center_y, int radius, uint32_t color, struct 
                     current_y >= 0 && current_y < (int)fb->height)
                 {
 
+                    draw_pixel(current_x, current_y, color, fb);
+                }
+            }
+        }
+    }
+}
+void draw_heart(int center_x, int center_y, int radius, uint32_t color, struct limine_framebuffer *fb)
+{
+    // A heart's bounding box is slightly larger than a standard circle.
+    // 13 / 10 is an integer approximation of 1.3
+    int bound = (radius * 13) / 10;
+
+    for (int y = -bound; y <= bound; y++)
+    {
+        for (int x = -bound; x <= bound; x++)
+        {
+            // Map to standard math coordinates:
+            // We invert Y (-y) so the top of the heart points UP on the screen.
+            int64_t X = x;
+            int64_t Y = -y;
+
+            // Calculate the pieces of the scaled integer equation:
+            // (X^2 + Y^2 - r^2)^3 - X^2 * Y^3 * r <= 0
+            int64_t x2 = X * X;
+            int64_t y2 = Y * Y;
+            int64_t r2 = (int64_t)radius * radius;
+
+            int64_t part1 = x2 + y2 - r2;
+            int64_t term1 = part1 * part1 * part1;
+            int64_t term2 = x2 * (Y * Y * Y) * radius;
+
+            // If the point is inside the heart curve, draw it!
+            if (term1 - term2 <= 0)
+            {
+                int current_x = center_x + x;
+                int current_y = center_y + y;
+
+                // CRITICAL: Safe bounds checking to prevent page faults
+                if (current_x >= 0 && current_x < (int)fb->width &&
+                    current_y >= 0 && current_y < (int)fb->height)
+                {
                     draw_pixel(current_x, current_y, color, fb);
                 }
             }
@@ -739,7 +844,6 @@ void _start(void)
     // If we make it to this line, we survived the switch!
     draw_string("SUCCESS: Custom Paging is Active!", 10, cur_y, 0x00FF00, fb);
 
-
     cur_y += 16;
 
     while (1)
@@ -955,7 +1059,7 @@ void _start(void)
                         draw_string("Hoping for your day to be good. Lets work--.", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
                     }
-                     else if (strcmp(input_buffer, "Sarah") == 0 || strcmp(input_buffer, "sarah") == 0)
+                    else if (strcmp(input_buffer, "Sarah") == 0 || strcmp(input_buffer, "sarah") == 0)
                     {
                         draw_string("Hello Mentor! Good to see you here.", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
@@ -1001,7 +1105,6 @@ void _start(void)
                             draw_string("We are extremely sorry that you didn't liked that . We will work more.", cur_x, cur_y, 0xEF2929, fb); // Red
                             cur_y += 12;
                         }
-                        
                     }
                     else if (strcmp(input_buffer, "Lahari") == 0 || strcmp(input_buffer, "lahari") == 0)
                     {
@@ -1347,6 +1450,82 @@ void _start(void)
 
                         draw_string("Rectangle drawn!", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
+                    }
+                    else if (strncmp(input_buffer, "hex ", 4) == 0)
+                    {
+                        int i = 4;                 // Start parsing after "hex "
+                        int params[3] = {0, 0, 0}; // X, Y, Radius
+
+                        // Parse the 3 integer arguments
+                        for (int p = 0; p < 3; p++)
+                        {
+                            while (input_buffer[i] == ' ')
+                                i++; // Skip spaces
+                            while (input_buffer[i] >= '0' && input_buffer[i] <= '9')
+                            {
+                                params[p] = params[p] * 10 + (input_buffer[i] - '0');
+                                i++;
+                            }
+                        }
+
+                        // Parse the final argument (Color)
+                        while (input_buffer[i] == ' ')
+                            i++;
+                        uint32_t hex_color = 0xFFFFFF; // Default to white
+
+                        if (input_buffer[i] != '\0')
+                        {
+                            // Skip "0x" if the user typed it
+                            if (input_buffer[i] == '0' && (input_buffer[i + 1] == 'x' || input_buffer[i + 1] == 'X'))
+                            {
+                                i += 2;
+                            }
+                            hex_color = hex2int(&input_buffer[i]);
+                        }
+
+                        // Draw the hexagon! params[0] = X, params[1] = Y, params[2] = Radius
+                        draw_hexagon(params[0], params[1], params[2], hex_color, fb);
+
+                        draw_string("Hexagon drawn!", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12; // Move the cursor down for the next terminal line
+                    }
+                    else if (strncmp(input_buffer, "heart ", 6) == 0)
+                    {
+                        int i = 6;                 // Start parsing after "heart "
+                        int params[3] = {0, 0, 0}; // X, Y, Radius
+
+                        // Parse the 3 integer arguments
+                        for (int p = 0; p < 3; p++)
+                        {
+                            while (input_buffer[i] == ' ')
+                                i++; // Skip spaces
+                            while (input_buffer[i] >= '0' && input_buffer[i] <= '9')
+                            {
+                                params[p] = params[p] * 10 + (input_buffer[i] - '0');
+                                i++;
+                            }
+                        }
+
+                        // Parse the final argument (Color)
+                        while (input_buffer[i] == ' ')
+                            i++;
+                        uint32_t heart_color = 0xFFFFFF; // Default to white
+
+                        if (input_buffer[i] != '\0')
+                        {
+                            // Skip "0x" if the user typed it
+                            if (input_buffer[i] == '0' && (input_buffer[i + 1] == 'x' || input_buffer[i + 1] == 'X'))
+                            {
+                                i += 2;
+                            }
+                            heart_color = hex2int(&input_buffer[i]);
+                        }
+
+                        // Draw the filled heart! params[0] = X, params[1] = Y, params[2] = Radius (Scale)
+                        draw_heart(params[0], params[1], params[2], heart_color, fb);
+
+                        draw_string("Heart drawn!", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12; // Move the cursor down for the next terminal line
                     }
                     // --- DRAW CIRCLE COMMAND ---
                     else if (strncmp(input_buffer, "circle ", 7) == 0)
