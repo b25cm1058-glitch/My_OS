@@ -529,6 +529,13 @@ void draw_heart(int center_x, int center_y, int radius, uint32_t color, struct l
         }
     }
 }
+void draw_triangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32_t color, struct limine_framebuffer *fb)
+{
+    // A triangle is simply 3 connecting lines
+    draw_line_fb(x1, y1, x2, y2, color, fb); // Line from point 1 to 2
+    draw_line_fb(x2, y2, x3, y3, color, fb); // Line from point 2 to 3
+    draw_line_fb(x3, y3, x1, y1, color, fb); // Line from point 3 back to 1
+}
 void draw_char(char c, int x, int y, uint32_t color, struct limine_framebuffer *fb)
 {
     for (int row = 0; row < 8; row++)
@@ -1450,6 +1457,36 @@ void _start(void)
                         cur_y = 10;
                     }
                     // --- DRAW RECTANGLE COMMAND ---
+                    else if (strncmp(input_buffer, "tri ", 4) == 0)
+                    {
+                        int i = 4;
+                        int params[6] = {0, 0, 0, 0, 0, 0}; // 6 arguments for 3 X/Y pairs
+
+                        for (int p = 0; p < 6; p++)
+                        {
+                            while (input_buffer[i] == ' ')
+                                i++;
+                            while (input_buffer[i] >= '0' && input_buffer[i] <= '9')
+                            {
+                                params[p] = params[p] * 10 + (input_buffer[i] - '0');
+                                i++;
+                            }
+                        }
+
+                        while (input_buffer[i] == ' ')
+                            i++;
+                        uint32_t color = 0xFFFFFF;
+                        if (input_buffer[i] != '\0')
+                        {
+                            if (input_buffer[i] == '0' && (input_buffer[i + 1] == 'x' || input_buffer[i + 1] == 'X'))
+                                i += 2;
+                            color = hex2int(&input_buffer[i]);
+                        }
+
+                        draw_triangle(params[0], params[1], params[2], params[3], params[4], params[5], color, fb);
+                        draw_string("Triangle drawn!", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12;
+                    }
                     else if (strncmp(input_buffer, "rect ", 5) == 0)
                     {
                         int i = 5;
