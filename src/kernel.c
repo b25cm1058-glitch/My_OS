@@ -955,6 +955,54 @@ void _start(void)
                         draw_string("Hoping for your day to be good. Lets work--.", cur_x, cur_y, current_text_color, fb);
                         cur_y += 12;
                     }
+                     else if (strcmp(input_buffer, "Sarah") == 0 || strcmp(input_buffer, "sarah") == 0)
+                    {
+                        draw_string("Hello Mentor! Good to see you here.", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12;
+                        draw_string("Hope, You are having a good day!", cur_x, cur_y, current_text_color, fb);
+                        cur_y += 12;
+                        char *question = "Did you like our project ?(y/n)";
+                        draw_string(question, cur_x, cur_y, 0xFCE94F, fb); // Yellow text
+                        // Move cursor to the end of the question
+                        cur_x += strlen(question) * 8;
+                        draw_cursor(cur_x, cur_y, current_text_color, fb);
+                        char user_answer = 0;
+                        // Mini-loop: Trap the OS here until 'y' or 'n' is pressed
+                        while (1)
+                        {
+                            if (inb(0x64) & 1)
+                            {
+                                uint8_t answer_scancode = inb(0x60);
+                                if (answer_scancode < 0x80)
+                                { // Key press
+                                    char key = scancode_map[answer_scancode];
+                                    if (key == 'y' || key == 'n' || key == 'Y' || key == 'N')
+                                    {
+                                        user_answer = key;
+                                        // Draw the letter they typed
+                                        draw_char(user_answer, cur_x, cur_y, current_text_color, fb);
+                                        break; // Break out of the mini-loop!
+                                    }
+                                }
+                            }
+                        }
+
+                        cur_y += 12;
+                        cur_x = 10;
+
+                        // Make a decision based on input!
+                        if (user_answer == 'y' || user_answer == 'Y')
+                        {
+                            draw_string("We are glad that you liked our project !", cur_x, cur_y, 0x8AE234, fb); // Green
+                            cur_y += 12;
+                        }
+                        else
+                        {
+                            draw_string("We are extremely sorry that you didn't liked that . We will work more.", cur_x, cur_y, 0xEF2929, fb); // Red
+                            cur_y += 12;
+                        }
+                        
+                    }
                     else if (strcmp(input_buffer, "Lahari") == 0 || strcmp(input_buffer, "lahari") == 0)
                     {
                         draw_string("Hello Bhabhi ji ", cur_x, cur_y, current_text_color, fb);
